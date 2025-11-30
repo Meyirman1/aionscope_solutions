@@ -1,0 +1,2 @@
+### This script prints alert message(s) based on random patient ids and cancer symptoms.
+Thus simulating real world patients those who has at least one symptom of cancer that notifies a doctor of the potential cancer development.
