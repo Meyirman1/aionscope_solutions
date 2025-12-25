@@ -14,3 +14,6 @@ local_view/
 
 # Ignore system files
 .DS_Store
+
+# MD files
+AS_archiver/Command_lines.md

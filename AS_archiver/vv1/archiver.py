@@ -6,7 +6,7 @@
 
 import json
 from pathlib import Path 
-import pydicom
+
 
 src_dir = Path('report_samples')
 #contains original txt reports
@@ -23,12 +23,9 @@ arch_reports_dir = Path.home()/'REPORTS_META_BACKUP'/'ARCHIVED_REPORTS'
 meta_dir = Path.home()/'REPORTS_META_BACKUP'/'ARCHIVED_METADATA'
 #contains json files with metadata inside archived dir
 
-src_dir.mkdir(parents=True, exist_ok=True)
-meta_dir.mkdir(parents=True, exist_ok=True)
-arch_reports_dir.mkdir(parents=True, exist_ok=True)
-lv_dir.mkdir(parents=True, exist_ok=True)
-lv_reports.mkdir(parents=True, exist_ok=True)
-lv_meta.mkdir(parents=True, exist_ok=True)
+all_dirs = [src_dir,meta_dir,arch_reports_dir,lv_dir,lv_reports,lv_meta]
+for each_dir in all_dirs:
+    each_dir.mkdir(parents=True, exist_ok=True)
 
 src_reports = list(src_dir.glob('*.txt'))
 
