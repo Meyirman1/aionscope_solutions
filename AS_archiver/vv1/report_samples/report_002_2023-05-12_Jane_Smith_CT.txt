@@ -1,0 +1,9 @@
+Patient ID: P002
+Patient Name: Jane Smith
+Date: 2023-05-12
+Modality: CT
+---
+Findings:
+Extensive hyperdense area noted in the left parietal lobe. Significant midline shift of 5mm detected.
+Impression:
+Acute intracranial Hemorrhage. Immediate neurosurgical consultation required.

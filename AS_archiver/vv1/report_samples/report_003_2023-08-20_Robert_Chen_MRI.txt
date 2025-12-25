@@ -1,0 +1,9 @@
+Patient ID: P003
+Patient Name: Robert Chen
+Date: 2023-08-20
+Modality: MRI
+---
+Findings:
+3cm mass identified in the upper lobe of the right lung. Spiculated margins and pleural tagging are visible.
+Impression:
+Highly suggestive of a Malignant lesion. Biopsy recommended.

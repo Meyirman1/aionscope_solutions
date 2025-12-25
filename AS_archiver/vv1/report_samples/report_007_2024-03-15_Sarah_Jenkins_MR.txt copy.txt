@@ -1,0 +1,8 @@
+Patient ID: P007 
+Patient Name: Sarah Jenkins 
+Date: 2024-03-15 
+Modality: MR
+---
+Findings: There is a full-thickness tear of the supraspinatus tendon measuring 2.2cm. The labrum appears intact. No significant joint effusion is visualized.
+Impression: 
+Full-thickness rotator cuff tear.

@@ -1,0 +1,9 @@
+Patient ID: P001
+Patient Name: John Doe
+Date: 2023-02-01
+Modality: XRAY
+---
+Body:
+X-ray of the left arm revealed a hairline fracture.
+Patient advised to wear a cast for 4 weeks.
+Conclusion: Fracture.

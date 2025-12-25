@@ -1,0 +1,9 @@
+Patient ID: P005
+Patient Name: Samuel Wilson
+Date: 2024-01-15
+Modality: X-ray
+---
+Findings:
+Disruption of the cortical bone at the distal radius. No joint displacement noted.
+Impression:
+Transverse Fracture of the radius.

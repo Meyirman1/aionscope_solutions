@@ -1,0 +1,9 @@
+Patient ID: P006
+Patient Name: Linda Brown
+Date: 2024-03-10
+Modality: CT
+---
+Findings:
+The appendix is dilated to 11mm with associated periappendiceal fat stranding.
+Impression:
+Acute appendicitis without signs of perforation.

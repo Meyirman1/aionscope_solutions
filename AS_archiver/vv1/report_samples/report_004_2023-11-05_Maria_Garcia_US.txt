@@ -1,0 +1,9 @@
+Patient ID: P004
+Patient Name: Maria Garcia
+Date: 2023-11-05
+Modality: Ultrasound
+---
+Findings:
+Gallbladder appears distended with thickened walls. Multiple mobile echogenic foci noted with posterior shadowing.
+Impression:
+Acute Cholecystitis. Surgical evaluation advised.

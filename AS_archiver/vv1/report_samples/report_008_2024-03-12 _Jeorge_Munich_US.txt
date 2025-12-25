@@ -1,0 +1,7 @@
+Patient ID: P007
+Patient Name: James Wilson 
+Date: 2024-03-12 
+Modality: US
+---
+Findings: The gallbladder appears distended with a thickened wall of 4mm. A single 1.5cm mobile echogenic focus is noted with posterior acoustic shadowing. 
+Impression: Cholelithiasis and findings suggestive of mild acute cholecystitis.
