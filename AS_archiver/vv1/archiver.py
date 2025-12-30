@@ -1,4 +1,3 @@
-#Building first folders so when it return none it doesn't nulify the address.
 ##AUTOMATING dest_paths with pathlib
 ##                    THE GLOSSARY FOR SHORTED WORDS:
 ## fp (filepath).
@@ -14,10 +13,10 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+#Building first folders so when it return none it doesn't nulify the address.
 
 src_dir = Path('report_samples')
 #contains original txt reports
-
 
 lv_dir = Path('local_view')
 
@@ -35,6 +34,7 @@ for each_dir in all_dirs:
     each_dir.mkdir(parents=True, exist_ok=True)
 
 src_reports = list(src_dir.glob('*.txt'))
+#puts all file format in one list.
 src_dcm_reports = list(src_dir.glob('*.dcm'))
 
 def extract_metadata(patient_id,date,patient_fname,patient_lname,modality):
@@ -101,9 +101,7 @@ def extract_dcm_header(dcm_report):
         except(TypeError,ValueError):
             format_date = 'Corrupted Date'
     else:
-        format_date = 'UnknownDate'
-
-    
+        format_date = 'UnknownDate'   
 
     format_name = str(get_name).replace("^"," ")
 
@@ -128,11 +126,12 @@ def arch_dcm_reports(dcm_reports):
             dest_report_fp = arch_reports_dir / dcm_report.name
             dest_meta_fp = meta_dir/header_json.name
 
-            ds = pydicom.dcmread(dcm_report)
+            ds = pydicom.dcmread(dcm_report, force=True)
             ds.save_as(dest_report_fp)
             ds.save_as(lv_dest_report_fp)
             cleaned_dcm = dcm_report.with_suffix('').name
-            print(f"The report {cleaned_dcm} with ID:{ds.PatientID} was archived successfully!")
+            patient_id = ds.get("PatientID","Anonymized")
+            print(f"The report {cleaned_dcm} with ID:{patient_id} was archived successfully!")
 
             payload_header = extract_dcm_header(ds)
 
@@ -166,15 +165,19 @@ def safe_archive(file_path):
             time.sleep(1)
             retries -= 1
         except Exception as e:
-            print(f"   [!] Unexpected error: {e}")
+            print(f"   [!] Critical error on {file_path} {type(e).__name__} - {e}")
             break
+        # except Exception as e:
+#             print(f"   [!] Unexpected error: {e}")
+#             break
+
     print(f"   [X] FAILED to archive {file_path.name} after multiple attempts.")
 
 class ReportHandler(FileSystemEventHandler):
    def on_created(self, event):
     ##Checking if event is just a folder if True it ignores it with 'return'
     if event.is_directory:
-        return
+        return 
     try:   
         raw_path = str(event.src_path)
         file_path = Path(raw_path).resolve()
@@ -182,24 +185,35 @@ class ReportHandler(FileSystemEventHandler):
         print(f"\nDetected new file and is being processed: {file_path.name}") 
         
         safe_archive(file_path)
-        
+
     except Exception as e:
         print(f"[!] ERROR processing {str(event.src_path)}: {e}")
 
-    ##Observer creation is the guard
 observer = Observer()
+##Observer creation is the guard
 handler = ReportHandler()
 
-##Giving the guard the manual(handler)
+
 observer.schedule(handler, path=str(src_dir), recursive=False)
-##start the guard shift
+##Giving the guard the manual(handler)
+
+print("Performing scan for leftover files in the receiver directory")
+leftovers = list(src_dir.glob('*'))
+if not leftovers:
+        print("No leftover files were found")
+elif leftovers:
+        for initial_file in leftovers:
+            safe_archive(initial_file)
+
+
 observer.start()
-print("Watching the folder:")
+##start the guard shift
+print("Watching the folder for new reports:")
 print("-" * 20)
 try:
     while True:
         time.sleep(0.5)
-        # The script "sleeps" for 1 second, then loops again.
+    # The script "sleeps" for 1 second, then loops again.
     # This uses almost zero CPU power.
 except KeyboardInterrupt:
     observer.stop()
