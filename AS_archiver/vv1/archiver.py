@@ -156,7 +156,11 @@ def safe_archive(file_path):
                 arch_reports([file_path])
             elif file_path.suffix.lower() == '.dcm':
                 arch_dcm_reports([file_path])
+            
+            print(f"[OK] Cleaning up the source {file_path.name}")
+            file_path.unlink()
             return
+           
         except PermissionError:
             print(f"   [!] File {file_path.name} is busy. Retrying in 1s... ({retries} left)")
             time.sleep(1)
@@ -177,7 +181,8 @@ class ReportHandler(FileSystemEventHandler):
         ## get the actual name of the file is just created
         print(f"\nDetected new file and is being processed: {file_path.name}") 
         
-
+        safe_archive(file_path)
+        
     except Exception as e:
         print(f"[!] ERROR processing {str(event.src_path)}: {e}")
 
