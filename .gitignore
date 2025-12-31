@@ -1,3 +1,4 @@
+
 # Ignore Virtual Environment
 venv/
 lib/
@@ -17,3 +18,10 @@ local_view/
 
 # MD files
 AS_archiver/Command_lines.md
+
+#Others
+AS_achiver/vv1/tutorial_lessons
+AS_achiver/vv1/report_samples
+AS_achiver/vv1/archived_reports
+AS_archiver/vv1/TEMPrEPORTS
+
