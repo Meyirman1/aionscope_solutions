@@ -145,8 +145,6 @@ def arch_dcm_reports(dcm_reports):
     except FileNotFoundError:
         print("\tERROR: Check if the targeted filepaths are correct.".upper())
 
-#also if one dcm report is invalid the script mist keep running for new reports.Do that after watchdog.
-
 def safe_archive(file_path):
     retries = 5
     while retries > 0:
@@ -156,7 +154,7 @@ def safe_archive(file_path):
             elif file_path.suffix.lower() == '.dcm':
                 arch_dcm_reports([file_path])
             
-            print(f"[OK] Cleaning up the source {file_path.name}")
+            print(f"[OK] Cleaning up the source {file_path.name} from {src_dir}")
             file_path.unlink()
             return
            
@@ -164,12 +162,14 @@ def safe_archive(file_path):
             print(f"   [!] File {file_path.name} is busy. Retrying in 1s... ({retries} left)")
             time.sleep(1)
             retries -= 1
+
+        # except IsADirectoryError:
+        #     print(f"   [!] File {file_path.name} is a folder, Please extract file-reports to proceed successful archival.")
+        #     break
+
         except Exception as e:
             print(f"   [!] Critical error on {file_path} {type(e).__name__} - {e}")
             break
-        # except Exception as e:
-#             print(f"   [!] Unexpected error: {e}")
-#             break
 
     print(f"   [X] FAILED to archive {file_path.name} after multiple attempts.")
 
@@ -197,19 +197,27 @@ handler = ReportHandler()
 observer.schedule(handler, path=str(src_dir), recursive=False)
 ##Giving the guard the manual(handler)
 
-print("Performing scan for leftover files in the receiver directory")
+print("\nPerforming scan for leftover files in the receiver directory:")
 leftovers = list(src_dir.glob('*'))
-if not leftovers:
-        print("No leftover files were found")
-elif leftovers:
-        for initial_file in leftovers:
-            safe_archive(initial_file)
+process_count = 0
+
+for left_report in leftovers:
+    if left_report.is_file():
+        safe_archive(left_report)
+        process_count += 1
+    elif left_report.is_dir():  
+        print(f"   [!] Please extract file-report(s) and delete the folder {left_report.name} to proceed a successful archival.")
+        process_count += 1
+if process_count == 0:
+        print("\tNo leftover files were found")
+
+    
 
 
 observer.start()
 ##start the guard shift
-print("Watching the folder for new reports:")
-print("-" * 20)
+print("\nWatching the folder for new reports:")
+print("-" * 36)
 try:
     while True:
         time.sleep(0.5)
