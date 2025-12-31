@@ -13,10 +13,10 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-#Building first folders so when it return none it doesn't nulify the address.
+#Building first Path folders so when it return none it doesn't nulify the address.
 
 src_dir = Path('report_samples')
-#contains original txt reports
+#contains original txt/dcm reports
 
 lv_dir = Path('local_view')
 
@@ -104,9 +104,10 @@ def extract_dcm_header(dcm_report):
         format_date = 'UnknownDate'   
 
     format_name = str(get_name).replace("^"," ")
-
+    format_id = str(get_id).strip()
+    #made id string
     extract  = {
-        "patient_id": f"P{get_id}",
+        "patient_id": f"P{format_id}",
         "date": f"{format_date}",
         "patient_name": f"{format_name}",
         "patient_gender": f"{get_sex}",
@@ -158,14 +159,15 @@ def safe_archive(file_path):
             file_path.unlink()
             return
            
+        except IsADirectoryError:
+                #for extra backup safety
+                print(f"   [!] File {file_path.name} is a folder, Please extract file-reports and delete the folder to proceed a successful archival.")
+                break
+        
         except PermissionError:
             print(f"   [!] File {file_path.name} is busy. Retrying in 1s... ({retries} left)")
             time.sleep(1)
             retries -= 1
-
-        # except IsADirectoryError:
-        #     print(f"   [!] File {file_path.name} is a folder, Please extract file-reports to proceed successful archival.")
-        #     break
 
         except Exception as e:
             print(f"   [!] Critical error on {file_path} {type(e).__name__} - {e}")
@@ -193,14 +195,12 @@ observer = Observer()
 ##Observer creation is the guard
 handler = ReportHandler()
 
-
 observer.schedule(handler, path=str(src_dir), recursive=False)
 ##Giving the guard the manual(handler)
 
 print("\nPerforming scan for leftover files in the receiver directory:")
 leftovers = list(src_dir.glob('*'))
 process_count = 0
-
 for left_report in leftovers:
     if left_report.is_file():
         safe_archive(left_report)
@@ -209,14 +209,12 @@ for left_report in leftovers:
         print(f"   [!] Please extract file-report(s) and delete the folder {left_report.name} to proceed a successful archival.")
         process_count += 1
 if process_count == 0:
-        print("\tNo leftover files were found")
-
-    
-
+        print("\tNo leftover files were found.")
 
 observer.start()
 ##start the guard shift
-print("\nWatching the folder for new reports:")
+print("-" * 36)
+print("Watching the folder for new reports:")
 print("-" * 36)
 try:
     while True:
