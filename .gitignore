@@ -20,8 +20,9 @@ local_view/
 AS_archiver/Command_lines.md
 
 #Others
-AS_achiver/vv1/tutorial_lessons
-AS_achiver/vv1/report_samples
-AS_achiver/vv1/archived_reports
+AS_archiver/tutorial_lessons
+
+AS_archiver/vv1/report_samples
+AS_archiver/vv1/archived_reports
 AS_archiver/vv1/TEMPrEPORTS
 
