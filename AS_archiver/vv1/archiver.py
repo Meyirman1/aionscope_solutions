@@ -17,7 +17,7 @@ import sqlite3
 
 #Building first Path folders so when it return none it doesn't nulify the address.
 
-src_dir = Path('report_samples')
+src_dir = Path('reports_receiver')
 #contains original txt/dcm reports
 
 lv_dir = Path('local_view')
@@ -46,15 +46,16 @@ def log_to_db(data, db_path = setup_db.db_name):
     cursor = conn.cursor()
     sql = ("""
            INSERT OR IGNORE into reports
-            (patient_id, patient_name, modality, report_date, file_path)
-           VALUES (?,?,?,?,?)
+            (patient_id, patient_name, report_name, report_date, modality,  file_path)
+           VALUES (?,?,?,?,?,?)
     """)
 
     values = (
        data['patient_id'],
        data['patient_name'],
-       data['modality'],
+       data['report_name'],
        data['report_date'],
+       data['modality'],
        str(data['file_path']),
     )
 
@@ -70,13 +71,16 @@ def log_to_db(data, db_path = setup_db.db_name):
     finally:
         conn.close()
 
-def extract_metadata(patient_id,report_date,patient_name,modality, filepath):
+def extract_metadata(patient_id,report_name,report_date,patient_name,modality, file_path):
     extract  = {
         "patient_id": f"P{patient_id}",
+        "report_name": f"{report_name}",
+        #report name could be for ex (knee234.dcm , tumourJ34.dcm)
+
         "report_date": f"{report_date}",
         "patient_name": f"{patient_name}",
         "modality": f"{modality}",
-        "file_path": f"{filepath}",
+        "file_path": f"{file_path}",
                  }
     return extract
 
@@ -105,12 +109,13 @@ def arch_reports(orig_reports):
             # .name only returns 'report.txt' 
             # (orig report returns the file with its parent directory 'report_samples/report.txt')
 
-            payload_metadata = extract_metadata(patient_id,report_date,patient_name,modality,dest_report_fp)
+            # report_name = orig_report.name
+            payload_metadata = extract_metadata(patient_id,orig_report.name,report_date,patient_name,modality,dest_report_fp)
 
             report_text = orig_report.read_text()
             dest_report_fp.write_text(report_text)
             lv_dest_report_fp.write_text(report_text)
-            print(f"The report with ID:{parts[1]} was archived successfully!")
+            print(f"✅The report with ID:{parts[1]} was archived successfully!")
                     
             with open(dest_meta_fp, 'w') as json_ouput:
                 json_dest = json_ouput
@@ -124,14 +129,14 @@ def arch_reports(orig_reports):
     except FileNotFoundError:
         print("\tERROR: Check if the targeted filepaths are correct.".upper())
     
-def extract_dcm_header(dcm_report,filepath):
+def extract_dcm_header(dcm_report,report_name,filepath):
     get_id = dcm_report.get('PatientID','UnknownPatientID')
     get_date = dcm_report.get('ContentDate') or dcm_report.get('AcquisitionDate') or dcm_report.get('StudyDate') or dcm_report.get('InstanceCreationDate')
     get_name = dcm_report.get('PatientName','UnknownPatientName')
     get_sex = dcm_report.get('PatientSex','UnknownPatientSex')
     get_si_uid = dcm_report.get('StudyInstanceUID','UnknownStudyInstanceUID')
     get_modality = dcm_report.get('Modality','UnknownModality')
-    
+    # get_report_name = dcm_report.get('StudyDescription', )
     if get_date and str(get_date).isdigit():
         try:
             format_date = datetime.strptime(get_date,"%Y%m%d").strftime("%d-%m-%Y")
@@ -145,6 +150,7 @@ def extract_dcm_header(dcm_report,filepath):
     #made id string
     extract  = {
         "patient_id": f"P{format_id}",
+        "report_name": f"P{report_name}",
         "report_date": f"{format_date}",
         "patient_name": f"{format_name}",
         "patient_gender": f"{get_sex}",
@@ -170,9 +176,9 @@ def arch_dcm_reports(dcm_reports):
             ds.save_as(lv_dest_report_fp)
             cleaned_dcm = dcm_report.with_suffix('').name
             patient_id = ds.get("PatientID","Anonymized")
-            print(f"The report {cleaned_dcm} with ID:{patient_id} was archived successfully!")
+            print(f"✅The report {cleaned_dcm} with ID:{patient_id} was archived successfully!")
 
-            payload_header = extract_dcm_header(ds,dest_report_fp)
+            payload_header = extract_dcm_header(ds,dcm_report.name,dest_report_fp)
 
             with open(dest_meta_fp, "w") as f_obj:
                 dcm_header = f_obj
@@ -236,7 +242,7 @@ handler = ReportHandler()
 observer.schedule(handler, path=str(src_dir), recursive=False)
 ##Giving the guard the manual(handler)
 
-print("\nPerforming scan for leftover files in the receiver directory:")
+print(f"\nPerforming scan for leftover files in '{src_dir}' directory:")
 leftovers = list(src_dir.glob('*'))
 process_count = 0
 for left_report in leftovers:
@@ -244,7 +250,7 @@ for left_report in leftovers:
         safe_archive(left_report)
         process_count += 1
     elif left_report.is_dir():  
-        print(f"   [!] Please extract file-report(s) and delete the folder {left_report.name} to proceed a successful archival.")
+        print(f"   [!] Please extract file-report(s) and delete the folder '{left_report.name}' to proceed a successful archival.")
         process_count += 1
 if process_count == 0:
         print("\tNo leftover file-reports to process were found.")

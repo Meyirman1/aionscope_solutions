@@ -8,15 +8,20 @@ def create_table():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS reports(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_order INTEGER PRIMARY KEY AUTOINCREMENT,
         patient_id TEXT NOT NULL,
         patient_name TEXT NOT NULL,
-        modality TEXT NOT NULL,
+        report_name TEXT NOT NULL,
         report_date TEXT NOT NULL,
+        modality TEXT NOT NULL,
         file_path TEXT UNIQUE
+
         )
         """)
-
+         # 25/03/2026, 14:30:05     (d/m/y, time)
+      # archived_timestamp TEXT NOT NULL
+      # archived_time TEXT NOT NULL
+      # archived_at TEXT NOT NULL  
     conn.commit()
     conn.close()
     print(f"\nThe {db_name} database was created successfully!")
