@@ -12,6 +12,8 @@ from datetime import datetime
 import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import setup_db
+import sqlite3
 
 #Building first Path folders so when it return none it doesn't nulify the address.
 
@@ -37,27 +39,59 @@ src_reports = list(src_dir.glob('*.txt'))
 #puts all file format in one list.
 src_dcm_reports = list(src_dir.glob('*.dcm'))
 
-def extract_metadata(patient_id,date,patient_fname,patient_lname,modality):
+
+
+def log_to_db(data, db_path = setup_db.db_name):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    sql = ("""
+           INSERT OR IGNORE into reports
+            (patient_id, patient_name, modality, report_date, file_path)
+           VALUES (?,?,?,?,?)
+    """)
+
+    values = (
+       data['patient_id'],
+       data['patient_name'],
+       data['modality'],
+       data['report_date'],
+       str(data['file_path']),
+    )
+
+    try:
+        cursor.execute(sql, values)
+        conn.commit()
+        if cursor.rowcount > 0:
+            print(f"✅ Database updated for Patient: {data['patient_id']}")
+        else:
+            print(f"⚠️ Skip: File already indexed in database.")
+    except sqlite3.Error as e:
+        print(f"❌ Database error: {e}")
+    finally:
+        conn.close()
+
+def extract_metadata(patient_id,report_date,patient_name,modality, filepath):
     extract  = {
         "patient_id": f"P{patient_id}",
-        "date": f"{date}",
-        "patient_firstname": f"{patient_fname}",
-        "patient_lastname": f"{patient_lname}",
-        "modality": f"{modality}"
+        "report_date": f"{report_date}",
+        "patient_name": f"{patient_name}",
+        "modality": f"{modality}",
+        "file_path": f"{filepath}",
                  }
     return extract
 
 def arch_reports(orig_reports):
     try:
         for orig_report in orig_reports:
-            parts = orig_report.stem.split('_')
+            stemmed = orig_report.stem
+            #stem only takes a name of the file without .txt
+            parts = stemmed.split('_')
             patient_id = parts[1]
-            date = parts[2]
-            patient_fname = parts[3]
-            patient_lname = parts[4]
+            report_date = parts[2]
+            patient_firstname = parts[3]
+            patient_lastname = parts[4]
+            patient_name = ' '.join([patient_firstname, patient_lastname])
             modality = parts[-1]
-
-            payload_metadata = extract_metadata(patient_id,date,patient_fname,patient_lname,modality)
 
             metadata_json = orig_report.with_suffix('.json')
             #swaps existing 'txt' with json and only creates a new path name in PYTHON.
@@ -71,8 +105,8 @@ def arch_reports(orig_reports):
             # .name only returns 'report.txt' 
             # (orig report returns the file with its parent directory 'report_samples/report.txt')
 
-            # local_view_fp = view_dir / orig_report.name
-            
+            payload_metadata = extract_metadata(patient_id,report_date,patient_name,modality,dest_report_fp)
+
             report_text = orig_report.read_text()
             dest_report_fp.write_text(report_text)
             lv_dest_report_fp.write_text(report_text)
@@ -84,6 +118,9 @@ def arch_reports(orig_reports):
             with open(lv_dest_meta_fp, 'w') as lv_json_output:
                 lv_json_dest = lv_json_output
                 json.dump(payload_metadata,lv_json_dest, indent=4)
+         
+            log_to_db(payload_metadata, setup_db.db_name)
+            #INSERING TO SQLITE3 DB
     except FileNotFoundError:
         print("\tERROR: Check if the targeted filepaths are correct.".upper())
     
@@ -209,10 +246,11 @@ for left_report in leftovers:
         print(f"   [!] Please extract file-report(s) and delete the folder {left_report.name} to proceed a successful archival.")
         process_count += 1
 if process_count == 0:
-        print("\tNo leftover files were found.")
+        print("\tNo leftover file-reports to process were found.")
 
 observer.start()
 ##start the guard shift
+
 print("-" * 36)
 print("Watching the folder for new reports:")
 print("-" * 36)
@@ -224,8 +262,8 @@ try:
 except KeyboardInterrupt:
     observer.stop()
 
-# Wait for the guard to finish packing up before closing completely.
 observer.join()
+# Wait for the guard to finish packing up before closing completely.
 
 
 
