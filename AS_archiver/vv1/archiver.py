@@ -46,10 +46,11 @@ def log_to_db(data, db_path = setup_db.db_name):
     cursor = conn.cursor()
     sql = ("""
            INSERT OR IGNORE into reports
-            (patient_id, patient_name, report_name, report_date, modality,  file_path)
-           VALUES (?,?,?,?,?,?)
+            (patient_id, patient_name, report_name, report_date, modality,  file_path, archived_at)
+           VALUES (?,?,?,?,?,?,?)
     """)
-
+    datenow = datetime.now()
+    timestamp = datenow.strftime("%d-%m-%Y, %H:%M:%S")
     values = (
        data['patient_id'],
        data['patient_name'],
@@ -57,6 +58,7 @@ def log_to_db(data, db_path = setup_db.db_name):
        data['report_date'],
        data['modality'],
        str(data['file_path']),
+       timestamp
     )
 
     try:
@@ -76,7 +78,6 @@ def extract_metadata(patient_id,report_name,report_date,patient_name,modality, f
         "patient_id": f"P{patient_id}",
         "report_name": f"{report_name}",
         #report name could be for ex (knee234.dcm , tumourJ34.dcm)
-
         "report_date": f"{report_date}",
         "patient_name": f"{patient_name}",
         "modality": f"{modality}",
@@ -150,7 +151,7 @@ def extract_dcm_header(dcm_report,report_name,filepath):
     #made id string
     extract  = {
         "patient_id": f"P{format_id}",
-        "report_name": f"P{report_name}",
+        "report_name": f"{report_name}",
         "report_date": f"{format_date}",
         "patient_name": f"{format_name}",
         "patient_gender": f"{get_sex}",
@@ -176,7 +177,7 @@ def arch_dcm_reports(dcm_reports):
             ds.save_as(lv_dest_report_fp)
             cleaned_dcm = dcm_report.with_suffix('').name
             patient_id = ds.get("PatientID","Anonymized")
-            print(f"✅The report {cleaned_dcm} with ID:{patient_id} was archived successfully!")
+            print(f"✅ The report {cleaned_dcm} with ID:{patient_id} was archived successfully!")
 
             payload_header = extract_dcm_header(ds,dcm_report.name,dest_report_fp)
 

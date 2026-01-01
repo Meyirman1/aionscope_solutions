@@ -14,8 +14,8 @@ def create_table():
         report_name TEXT NOT NULL,
         report_date TEXT NOT NULL,
         modality TEXT NOT NULL,
-        file_path TEXT UNIQUE
-
+        file_path TEXT UNIQUE,
+        archived_at TEXT NOT NULL
         )
         """)
          # 25/03/2026, 14:30:05     (d/m/y, time)
