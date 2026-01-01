@@ -124,7 +124,7 @@ def arch_reports(orig_reports):
     except FileNotFoundError:
         print("\tERROR: Check if the targeted filepaths are correct.".upper())
     
-def extract_dcm_header(dcm_report):
+def extract_dcm_header(dcm_report,filepath):
     get_id = dcm_report.get('PatientID','UnknownPatientID')
     get_date = dcm_report.get('ContentDate') or dcm_report.get('AcquisitionDate') or dcm_report.get('StudyDate') or dcm_report.get('InstanceCreationDate')
     get_name = dcm_report.get('PatientName','UnknownPatientName')
@@ -145,11 +145,12 @@ def extract_dcm_header(dcm_report):
     #made id string
     extract  = {
         "patient_id": f"P{format_id}",
-        "date": f"{format_date}",
+        "report_date": f"{format_date}",
         "patient_name": f"{format_name}",
         "patient_gender": f"{get_sex}",
         "study Instance UID": f"{get_si_uid}",
-        "modality": f"{get_modality}"
+        "modality": f"{get_modality}",
+        "file_path": f"{filepath}",
                  }
     return extract
 
@@ -171,7 +172,7 @@ def arch_dcm_reports(dcm_reports):
             patient_id = ds.get("PatientID","Anonymized")
             print(f"The report {cleaned_dcm} with ID:{patient_id} was archived successfully!")
 
-            payload_header = extract_dcm_header(ds)
+            payload_header = extract_dcm_header(ds,dest_report_fp)
 
             with open(dest_meta_fp, "w") as f_obj:
                 dcm_header = f_obj
@@ -179,7 +180,7 @@ def arch_dcm_reports(dcm_reports):
             with open(lv_dest_meta_fp, "w") as f_obj:
                 lv_dcm_header = f_obj
                 json.dump(payload_header, lv_dcm_header, indent=4)
-                
+            log_to_db(payload_header, setup_db.db_name)
     except FileNotFoundError:
         print("\tERROR: Check if the targeted filepaths are correct.".upper())
 
