@@ -46,15 +46,19 @@ def log_to_db(data, db_path = setup_db.db_name):
     cursor = conn.cursor()
     sql = ("""
            INSERT OR IGNORE into reports
-            (patient_id, patient_name, report_name, report_date, modality,  file_path, archived_at)
-           VALUES (?,?,?,?,?,?,?)
+            (patient_id, patient_name, report_name, filter_type, report_date, modality,  file_path, archived_at)
+           VALUES (?,?,?,?,?,?,?,?)
     """)
     datenow = datetime.now()
-    timestamp = datenow.strftime("%d-%m-%Y, %H:%M:%S")
+    #timestamp = datenow.strftime("%d-%m-%Y, %H:%M:%S")
+         ##formatted but due to computer could have misconception 
+         ##when displaying recent reports so use Y/M/D format.
+    timestamp = datenow.strftime("%Y-%m-%d, %H:%M:%S")
     values = (
        data['patient_id'],
        data['patient_name'],
        data['report_name'],
+       data['filter_type'],
        data['report_date'],
        data['modality'],
        str(data['file_path']),
@@ -73,11 +77,12 @@ def log_to_db(data, db_path = setup_db.db_name):
     finally:
         conn.close()
 
-def extract_metadata(patient_id,report_name,report_date,patient_name,modality, file_path):
+def extract_metadata(patient_id,report_name,report_type,report_date,patient_name,modality, file_path):
     extract  = {
         "patient_id": f"P{patient_id}",
         "report_name": f"{report_name}",
         #report name could be for ex (knee234.dcm , tumourJ34.dcm)
+        "filter_type": f"{report_type}",  
         "report_date": f"{report_date}",
         "patient_name": f"{patient_name}",
         "modality": f"{modality}",
@@ -91,13 +96,21 @@ def arch_reports(orig_reports):
             stemmed = orig_report.stem
             #stem only takes a name of the file without .txt
             parts = stemmed.split('_')
+            
+
+            if not len(parts) == 6:
+                print(f"⚠️  [RENAME REQUIRED]: File '{orig_report.name}' lacks the correct metadata format.")
+                print("\tFormat must be: type_ID_date_Firstname_Lastname_modality.txt")
+                return False # Stops the function and tells safe_archive NOT to delete
+                    
+            report_type = parts[0]
             patient_id = parts[1]
             report_date = parts[2]
             patient_firstname = parts[3]
             patient_lastname = parts[4]
             patient_name = ' '.join([patient_firstname, patient_lastname])
             modality = parts[-1]
-
+            
             metadata_json = orig_report.with_suffix('.json')
             #swaps existing 'txt' with json and only creates a new path name in PYTHON.
             # replace(string method) has more risks to not cut exact 'report.txt.leichomia.txt' but the name so use this above.
@@ -111,7 +124,7 @@ def arch_reports(orig_reports):
             # (orig report returns the file with its parent directory 'report_samples/report.txt')
 
             # report_name = orig_report.name
-            payload_metadata = extract_metadata(patient_id,orig_report.name,report_date,patient_name,modality,dest_report_fp)
+            payload_metadata = extract_metadata(patient_id,orig_report.name,report_type,report_date,patient_name,modality,dest_report_fp)
 
             report_text = orig_report.read_text()
             dest_report_fp.write_text(report_text)
@@ -126,9 +139,15 @@ def arch_reports(orig_reports):
                 json.dump(payload_metadata,lv_json_dest, indent=4)
          
             log_to_db(payload_metadata, setup_db.db_name)
-            #INSERING TO SQLITE3 DB
+            #INSERTING TO SQLITE3 DB
+            return True # SUCCESS: Tells safe_archive it is safe to delete original
     except FileNotFoundError:
         print("\tERROR: Check if the targeted filepaths are correct.".upper())
+    except Exception as e:
+        print(f"[X] Error during archival: {e}")
+        return False
+  
+            
     
 def extract_dcm_header(dcm_report,report_name,filepath):
     get_id = dcm_report.get('PatientID','UnknownPatientID')
@@ -188,25 +207,39 @@ def arch_dcm_reports(dcm_reports):
                 lv_dcm_header = f_obj
                 json.dump(payload_header, lv_dcm_header, indent=4)
             log_to_db(payload_header, setup_db.db_name)
+            return True
     except FileNotFoundError:
         print("\tERROR: Check if the targeted filepaths are correct.".upper())
-
+    
 def safe_archive(file_path):
     retries = 5
     while retries > 0:
         try:
+            status = False
             if file_path.suffix.lower() == '.txt':
-                arch_reports([file_path])
+                status = arch_reports([file_path])
+               
+                if status and file_path:
+                    print(f"[OK] Cleaning up the source {file_path.name} from {src_dir}")
+                    file_path.unlink()
+                    return True
+                else:
+                    print(f"🛑 [HOLD] {file_path.name} preserved. Please fix the filename underscores.")
+                    return False
             elif file_path.suffix.lower() == '.dcm':
-                arch_dcm_reports([file_path])
-            
-            print(f"[OK] Cleaning up the source {file_path.name} from {src_dir}")
-            file_path.unlink()
-            return
+                status = arch_dcm_reports([file_path])
+                  
+                if status:
+                    print(f"[OK] Cleaning up DICOM: {file_path.name}")
+                    file_path.unlink()
+                    return True
+                else:
+                    print(f"🛑 [HOLD] DICOM {file_path.name} failed processing.")
+                    return False
            
         except IsADirectoryError:
                 #for extra backup safety
-                print(f"   [!] File {file_path.name} is a folder, Please extract file-reports and delete the folder to proceed a successful archival.")
+                print(f"   [!] File {file_path.name} is a folder, Please extract file-reports and delete the folder to proceed the successful archival.")
                 break
         
         except PermissionError:

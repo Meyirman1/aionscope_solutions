@@ -11,6 +11,7 @@ def create_table():
         report_order INTEGER PRIMARY KEY AUTOINCREMENT,
         patient_id TEXT NOT NULL,
         patient_name TEXT NOT NULL,
+        filter_type TEXT NOT NULL,
         report_name TEXT NOT NULL,
         report_date TEXT NOT NULL,
         modality TEXT NOT NULL,
@@ -26,10 +27,6 @@ def create_table():
     conn.close()
     print(f"\nThe {db_name} database was created successfully!")
 
-# if __name__ == '__archiver__':
 create_table()
 
-# cur.execute("""
-
-#             """)
 
