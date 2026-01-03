@@ -140,10 +140,9 @@ def arch_reports(orig_reports):
          
             log_to_db(payload_metadata, setup_db.db_name)
             #INSERTING TO SQLITE3 DB
-            
+
             return True # SUCCESS: Tells safe_archive it is safe to delete original
-    except FileNotFoundError:
-        print("\tERROR: Check if the targeted filepaths are correct.".upper())
+
     except Exception as e:
         print(f"[X] Error during archival: {e}")
         return False
@@ -154,7 +153,8 @@ def extract_dcm_header(dcm_report,report_name,filepath):
     get_id = dcm_report.get('PatientID','UnknownPatientID')
     get_date = dcm_report.get('ContentDate') or dcm_report.get('AcquisitionDate') or dcm_report.get('StudyDate') or dcm_report.get('InstanceCreationDate')
     get_name = dcm_report.get('PatientName','UnknownPatientName')
-    get_filter_type = dcm_report.get('FilterType','UnknownPatientReportType')
+    get_filter = dcm_report.get('FilterType') or dcm_report.get('BodyPartExamined') or dcm_report.get('StudyDescription') or dcm_report.get('General Scan', 'UnknownFilterType')
+        
     get_sex = dcm_report.get('PatientSex','UnknownPatientSex')
     get_si_uid = dcm_report.get('StudyInstanceUID','UnknownStudyInstanceUID')
     get_modality = dcm_report.get('Modality','UnknownModality')
@@ -169,13 +169,14 @@ def extract_dcm_header(dcm_report,report_name,filepath):
 
     format_name = str(get_name).replace("^"," ")
     format_id = str(get_id).strip()
+    format_filter = str(get_filter).strip().title()
     #made id string
     extract  = {
         "patient_id": f"P{format_id}",
         "report_name": f"{report_name}",
         "report_date": f"{format_date}",
         "patient_name": f"{format_name}",
-        "filter_type": f"{get_filter_type}",
+        "filter_type": f"{format_filter}",
         "patient_gender": f"{get_sex}",
         "study Instance UID": f"{get_si_uid}",
         "modality": f"{get_modality}",
