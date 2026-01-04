@@ -6,6 +6,7 @@
 import json
 from pathlib import Path 
 import pydicom
+from docx import Document
 from datetime import datetime
 # import logging ##pip install
 # import sentry ##pip install
@@ -14,6 +15,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import setup_db
 import sqlite3
+import logging
 
 #Building first Path folders so when it return none it doesn't nulify the address.
 
@@ -69,7 +71,8 @@ def log_to_db(data, db_path = setup_db.db_name):
         cursor.execute(sql, values)
         conn.commit()
         if cursor.rowcount > 0:
-            print(f"✅ Database updated for Patient: {data['patient_id']}")
+            msg = f"✅ Database updated for Patient: {data['patient_id']}"
+            return msg
         else:
             print(f"⚠️ Skip: File already indexed in database.")
     except sqlite3.Error as e:
@@ -274,13 +277,6 @@ class ReportHandler(FileSystemEventHandler):
     except Exception as e:
         print(f"[!] ERROR processing {str(event.src_path)}: {e}")
 
-observer = Observer()
-##Observer creation is the guard
-handler = ReportHandler()
-
-observer.schedule(handler, path=str(src_dir), recursive=False)
-##Giving the guard the manual(handler)
-
 print(f"\nPerforming scan for leftover files in '{src_dir}' directory:")
 leftovers = list(src_dir.glob('*'))
 process_count = 0
@@ -294,22 +290,37 @@ for left_report in leftovers:
 if process_count == 0:
         print("\tNo leftover file-reports to process were found.")
 
-observer.start()
-##start the guard shift
 
-print("-" * 36)
-print("Watching the folder for new reports:")
-print("-" * 36)
-try:
-    while True:
-        time.sleep(0.5)
-    # The script "sleeps" for 1 second, then loops again.
-    # This uses almost zero CPU power.
-except KeyboardInterrupt:
-    observer.stop()
+def start_observing(observer, handler):
+    observer.schedule(handler, path=str(src_dir), recursive=False)
+    ##Giving the guard the manual(handler)
 
-observer.join()
-# Wait for the guard to finish packing up before closing completely.
+    observer.start()
+    ##start the guard shift
+    
+    print("-" * 36)
+    print("Watching the folder for new reports:")
+    print("-" * 36)
+   
+def stop_observing(observer):
+    try:
+        while True:
+            time.sleep(0.5)
+        # The script "sleeps" for 1 second, then loops again.
+        # This uses almost zero CPU power.
+    except KeyboardInterrupt:
+        observer.stop()
+
+    observer.join()
+    # Wait for the guard to finish packing up before closing completely.
+
+observer = Observer()
+##Observer creation is the guard
+handler = ReportHandler()
+
+start_observing(observer, handler)
+stop_observing(observer)
+
 
 
 
